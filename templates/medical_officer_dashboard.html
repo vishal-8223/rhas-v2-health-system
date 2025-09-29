@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Officer Dashboard - RHAS v2.0</title>
+    
+    <!-- External Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 25%, #2d2d2d 50%, #1a1a1a 75%, #0c0c0c 100%);
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(0, 150, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 100, 200, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        /* Header Styles */
+        .header-section {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .profile-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+        
+        .profile-info h5 {
+            margin: 0;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        
+        .profile-info p {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+        
+        .medical-alerts {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .alert-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid;
+        }
+        
+        .alert-critical { 
+            background: rgba(255, 68, 68, 0.1); 
+            color: #ff4444; 
+            border-color: #ff4444; 
+            animation: pulse-critical 2s infinite;
+        }
+        .alert-warning { 
+            background: rgba(255, 221, 0, 0.1); 
+            color: #ffdd00; 
+            border-color: #ffdd00; 
+        }
+        .alert-normal { 
+            background: rgba(0, 255, 136, 0.1); 
+            color: #00ff88; 
+            border-color: #00ff88; 
+        }
+        
+        /* Dashboard Cards */
+        .dashboard-card {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 25px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #ff6b35, #f7931e);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(247, 147, 30, 0.3);
+        }
+        
+        .dashboard-card:hover::before {
+            opacity: 1;
+        }
+        
+        /* Statistics Cards */
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #ff6b35;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        
+        .stat-trend {
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+        
+        .trend-up { color: #00ff88; }
+        .trend-down { color: #ff4444; }
+        .trend-stable { color: #ffdd00; }
+        
+        /* Analytics Charts */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+        
+        .chart-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-tab {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .chart-tab.active, .chart-tab:hover {
+            background: rgba(247, 147, 30, 0.2);
+            border-color: #f7931e;
+            color: #f7931e;
+        }
+        
+        /* District Map */
+        .district-map {
+            height: 400px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Critical Cases Panel */
+        .critical-case {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .critical-case:hover {
+            background: rgba(255, 68, 68, 0.15);
+            transform: translateX(5px);
+        }
+        
+        .case-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .case-severity {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .severity-critical { 
+            background: rgba(255, 68, 68, 0.2); 
+            color: #ff4444; 
+            border: 1px solid rgba(255, 68, 68, 0.5); 
+        }
+        .severity-high { 
+            background: rgba(255, 149, 0, 0.2); 
+            color: #ff9500; 
+            border: 1px solid rgba(255, 149, 0, 0.5); 
+        }
+        .severity-medium { 
+            background: rgba(255, 221, 0, 0.2); 
+            color: #ffdd00; 
+            border: 1px solid rgba(255, 221, 0, 0.5); 
+        }
+        
+        .case-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-emergency {
+            background: linear-gradient(45deg, #ff4444, #cc3333);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-assign {
+            background: linear-gradient(45deg, #f7931e, #ff6b35);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-emergency:hover, .btn-assign:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* AI Insights Panel */
+        .ai-insight {
+            background: linear-gradient(135deg, rgba(0, 150, 255, 0.1), rgba(54, 209, 220, 0.1));
+            border: 1px solid rgba(54, 209, 220, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .insight-icon {
+            font-size: 1.5rem;
+            color: #36d1dc;
+            margin-right: 10px;
+        }
+        
+        /* Resource Management */
+        .resource-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid;
+        }
+        
+        .resource-available { border-left-color: #00ff88; }
+        .resource-low { border-left-color: #ffdd00; }
+        .resource-critical { border-left-color: #ff4444; }
+        
+        .resource-status {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        /* Team Management */
+        .team-member {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .team-member:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .member-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, #5b86e5, #36d1dc);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+        }
+        
+        .member-status {
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-online { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .status-busy { background: rgba(255, 221, 0, 0.2); color: #ffdd00; }
+        .status-offline { background: rgba(255, 255, 255, 0.2); color: #ffffff; }
+        
+        /* Quick Actions */
+        .quick-action-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .quick-action-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .quick-action-card:hover {
+            background: rgba(247, 147, 30, 0.1);
+            border-color: #f7931e;
+            transform: translateY(-3px);
+        }
+        
+        .action-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #f7931e;
+        }
+        
+        /* Animations */
+        @keyframes pulse-critical {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-card {
+                padding: 15px;
+            }
+            
+            .stat-value {
+                font-size: 2rem;
+            }
+            
+            .quick-action-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Section -->
+    <div class="header-section">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <div class="user-profile">
+                        <div class="profile-avatar">
+                            <i class="fas fa-stethoscope"></i>
+                        </div>
+                        <div class="profile-info">
+                            <h5>{{ user.full_name }}</h5>
+                            <p><i class="fas fa-hospital"></i> {{ user.hospital }} | {{ role_name }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-md"></i> RHAS v2.0 - Medical Officer Dashboard
+                    </h4>
+                </div>
+                <div class="col-md-4">
+                    <div class="medical-alerts justify-content-end">
+                        <div class="alert-indicator alert-normal" id="systemAlert">
+                            <div class="fas fa-heartbeat"></div>
+                            System Normal
+                        </div>
+                        <a href="/logout" class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-lg-9">
+                <!-- Primary Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="dashboard-card stat-card fade-in">
+                            <div class="stat-value" id="activeCases">0</div>
+                            <div class="stat-label">Active Cases</div>
+                            <div class="stat-trend trend-up">
+                                <i class="fas fa-arrow-up"></i> +5%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-card stat-card fade-in">
+                            <div class="stat-value" id="criticalAlerts">0</div>
+                            <div class="stat-label">Critical Alerts</div>
+                            <div class="stat-trend trend-down">
+                                <i class="fas fa-arrow-down"></i> -2
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-card stat-card fade-in">
+                            <div class="stat-value" id="chwTeamSize">0</div>
+                            <div class="stat-label">CHW Team Size</div>
+                            <div class="stat-trend trend-stable">
+                                <i class="fas fa-minus"></i> Stable
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-card stat-card fade-in">
+                            <div class="stat-value" id="responseRate">0%</div>
+                            <div class="stat-label">Response Rate</div>
+                            <div class="stat-trend trend-up">
+                                <i class="fas fa-arrow-up"></i> +3%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Dashboard -->
+                <div class="dashboard-card fade-in">
+                    <h5 class="mb-3">
+                        <i class="fas fa-chart-line"></i> Disease Analytics & Trends
+                    </h5>
+                    <div class="chart-tabs">
+                        <div class="chart-tab active" data-chart="weekly">Weekly Trends</div>
+                        <div class="chart-tab" data-chart="disease">Disease Patterns</div>
+                        <div class="chart-tab" data-chart="severity">Severity Analysis</div>
+                        <div class="chart-tab" data-chart="geographic">Geographic Distribution</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="analyticsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- District Health Map -->
+                <div class="dashboard-card fade-in">
+                    <h5 class="mb-3">
+                        <i class="fas fa-map-marked-alt"></i> District Health Surveillance Map
+                    </h5>
+                    <div class="district-map" id="districtMap"></div>
+                    <div class="row mt-3">
+                        <div class="col-2 text-center">
+                            <div class="text-success">
+                                <i class="fas fa-circle"></i> Normal
+                                <div class="fw-bold" id="normalAreas">0</div>
+                            </div>
+                        </div>
+                        <div class="col-2 text-center">
+                            <div class="text-warning">
+                                <i class="fas fa-circle"></i> Alert
+                                <div class="fw-bold" id="alertAreas">0</div>
+                            </div>
+                        </div>
+                        <div class="col-2 text-center">
+                            <div class="text-danger">
+                                <i class="fas fa-circle"></i> Outbreak
+                                <div class="fw-bold" id="outbreakAreas">0</div>
+                            </div>
+                        </div>
+                        <div class="col-2 text-center">
+                            <div class="text-info">
+                                <i class="fas fa-circle"></i> Surveillance
+                                <div class="fw-bold" id="surveillanceAreas">0</div>
+                            </div>
+                        </div>
+                        <div class="col-2 text-center">
+                            <div class="text-secondary">
+                                <i class="fas fa-circle"></i> No Data
+                                <div class="fw-bold" id="noDataAreas">0</div>
+                            </div>
+                        </div>
+                        <div class="col-2 text-center">
+                            <div class="text-primary">
+                                <i class="fas fa-circle"></i> Quarantine
+                                <div class="fw-bold" id="quarantineAreas">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Critical Cases Management -->
+                <div class="dashboard-card fade-in">
+                    <h5 class="mb-3">
+                        <i class="fas fa-exclamation-triangle"></i> Critical Cases Requiring Immediate Attention
+                        <span class="badge bg-danger ms-2" id="criticalCount">0</span>
+                    </h5>
+                    <div id="criticalCasesList">
+                        <!-- Critical cases will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-3">
+                <!-- AI Health Insights -->
+                <div class="dashboard-card">
+                    <h6 class="mb-3">
+                        <i class="fas fa-brain"></i> AI Health Insights
+                    </h6>
+                    <div id="aiInsights">
+                        <!-- AI insights will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Resource Management -->
+                <div class="dashboard-card">
+                    <h6 class="mb-3">
+                        <i class="fas fa-boxes"></i> Resource Management
+                    </h6>
+                    <div id="resourceStatus">
+                        <!-- Resource status will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Team Management -->
+                <div class="dashboard-card">
+                    <h6 class="mb-3">
+                        <i class="fas fa-users"></i> CHW Team Status
+                    </h6>
+                    <div id="teamStatus">
+                        <!-- Team members will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="dashboard-card">
+                    <h6 class="mb-3">
+                        <i class="fas fa-bolt"></i> Quick Actions
+                    </h6>
+                    <div class="quick-action-grid">
+                        <div class="quick-action-card" onclick="sendEmergencyAlert()">
+                            <div class="action-icon">
+                                <i class="fas fa-ambulance"></i>
+                            </div>
+                            <div class="fw-bold">Emergency Alert</div>
+                        </div>
+                        <div class="quick-action-card" onclick="generateReport()">
+                            <div class="action-icon">
+                                <i class="fas fa-file-medical-alt"></i>
+                            </div>
+                            <div class="fw-bold">Generate Report</div>
+                        </div>
+                        <div class="quick-action-card" onclick="scheduleVisit()">
+                            <div class="action-icon">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <div class="fw-bold">Schedule Visit</div>
+                        </div>
+                        <div class="quick-action-card" onclick="contactCHW()">
+                            <div class="action-icon">
+                                <i class="fas fa-phone"></i>
+                            </div>
+                            <div class="fw-bold">Contact CHW</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Notifications -->
+                <div class="dashboard-card">
+                    <h6 class="mb-3">
+                        <i class="fas fa-bell"></i> Recent Notifications
+                    </h6>
+                    <div id="notifications">
+                        <!-- Notifications will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize dashboard
+        let dashboardData = {};
+        let districtMap;
+        let analyticsChart;
+
+        // Load dashboard data
+        function loadDashboardData() {
+            fetch('/api/medical-officer-dashboard')
+                .then(response => response.json())
+                .then(data => {
+                    dashboardData = data;
+                    updateStatistics();
+                    updateCriticalCases();
+                    updateAIInsights();
+                    updateResourceStatus();
+                    updateTeamStatus();
+                    updateDistrictMap();
+                    updateAnalyticsChart();
+                    updateSystemAlerts();
+                })
+                .catch(error => console.error('Error loading dashboard data:', error));
+        }
+
+        // Update statistics cards
+        function updateStatistics() {
+            document.getElementById('activeCases').textContent = dashboardData.active_cases || 0;
+            document.getElementById('criticalAlerts').textContent = dashboardData.critical_alerts || 0;
+            document.getElementById('chwTeamSize').textContent = dashboardData.chw_team_size || 0;
+            document.getElementById('responseRate').textContent = dashboardData.response_rate || '0%';
+            
+            // Update critical count badge
+            document.getElementById('criticalCount').textContent = dashboardData.critical_cases?.length || 0;
+        }
+
+        // Update critical cases
+        function updateCriticalCases() {
+            const criticalList = document.getElementById('criticalCasesList');
+            const criticalCases = dashboardData.critical_cases || [];
+            
+            if (criticalCases.length === 0) {
+                criticalList.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h6>No Critical Cases</h6>
+                        <p class="text-muted">All cases are under control.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            criticalList.innerHTML = criticalCases.map(caseItem => `
+                <div class="critical-case">
+                    <div class="case-header">
+                        <div>
+                            <strong>Patient ID: ${caseItem.patient_id}</strong>
+                            <span class="case-severity severity-${caseItem.severity.toLowerCase()}">${caseItem.severity}</span>
+                        </div>
+                        <div class="text-muted small">${caseItem.time}</div>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Location:</strong> ${caseItem.location}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Symptoms:</strong> ${caseItem.symptoms}
+                    </div>
+                    <div class="mb-2">
+                        <strong>AI Risk Assessment:</strong> ${caseItem.risk_assessment}
+                    </div>
+                    <div class="case-actions">
+                        <button class="btn-emergency" onclick="dispatchEmergency('${caseItem.patient_id}')">
+                            <i class="fas fa-ambulance"></i> Dispatch Emergency
+                        </button>
+                        <button class="btn-assign" onclick="assignToSpecialist('${caseItem.patient_id}')">
+                            <i class="fas fa-user-md"></i> Assign Specialist
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="viewDetails('${caseItem.patient_id}')">
+                            <i class="fas fa-info-circle"></i> Full Details
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update AI insights
+        function updateAIInsights() {
+            const insights = document.getElementById('aiInsights');
+            const aiInsights = dashboardData.ai_insights || [];
+            
+            insights.innerHTML = aiInsights.map(insight => `
+                <div class="ai-insight">
+                    <div class="d-flex align-items-center">
+                        <i class="fas ${insight.icon} insight-icon"></i>
+                        <div>
+                            <div class="fw-bold">${insight.title}</div>
+                            <div class="small text-muted">${insight.description}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-muted">No new insights available.</p>';
+        }
+
+        // Update resource status
+        function updateResourceStatus() {
+            const resources = document.getElementById('resourceStatus');
+            const resourceData = dashboardData.resources || [];
+            
+            resources.innerHTML = resourceData.map(resource => `
+                <div class="resource-item resource-${resource.status}">
+                    <div>
+                        <div class="fw-bold">${resource.name}</div>
+                        <div class="small text-muted">${resource.description}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="resource-status">${resource.quantity}</div>
+                        <div class="small text-muted">${resource.status.toUpperCase()}</div>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-muted">No resource data available.</p>';
+        }
+
+        // Update team status
+        function updateTeamStatus() {
+            const team = document.getElementById('teamStatus');
+            const teamData = dashboardData.team_members || [];
+            
+            team.innerHTML = teamData.map(member => `
+                <div class="team-member">
+                    <div class="member-avatar">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold">${member.name}</div>
+                        <div class="small text-muted">${member.location}</div>
+                    </div>
+                    <div class="text-end">
+                        <span class="member-status status-${member.status}">${member.status.toUpperCase()}</span>
+                        <div class="small text-muted">${member.cases} cases</div>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-muted">No team data available.</p>';
+        }
+
+        // Initialize district map
+        function updateDistrictMap() {
+            if (!districtMap) {
+                districtMap = L.map('districtMap').setView([23.2599, 77.4126], 12);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(districtMap);
+            }
+            
+            const mapData = dashboardData.district_map_data || {};
+            
+            // Update area counts
+            document.getElementById('normalAreas').textContent = mapData.normal_areas || 0;
+            document.getElementById('alertAreas').textContent = mapData.alert_areas || 0;
+            document.getElementById('outbreakAreas').textContent = mapData.outbreak_areas || 0;
+            document.getElementById('surveillanceAreas').textContent = mapData.surveillance_areas || 0;
+            document.getElementById('noDataAreas').textContent = mapData.no_data_areas || 0;
+            document.getElementById('quarantineAreas').textContent = mapData.quarantine_areas || 0;
+            
+            // Add markers for different areas
+            const areas = mapData.areas || [];
+            areas.forEach(area => {
+                const color = area.status === 'normal' ? 'green' : 
+                            area.status === 'alert' ? 'orange' : 
+                            area.status === 'outbreak' ? 'red' : 
+                            area.status === 'surveillance' ? 'blue' : 
+                            area.status === 'quarantine' ? 'purple' : 'gray';
+                
+                L.circleMarker([area.lat, area.lng], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.6,
+                    radius: 10
+                }).addTo(districtMap)
+                .bindPopup(`
+                    <b>${area.name}</b><br>
+                    Status: ${area.status.toUpperCase()}<br>
+                    Cases: ${area.cases}<br>
+                    Population: ${area.population}
+                `);
+            });
+        }
+
+        // Initialize analytics chart
+        function updateAnalyticsChart() {
+            const ctx = document.getElementById('analyticsChart').getContext('2d');
+            
+            if (analyticsChart) {
+                analyticsChart.destroy();
+            }
+            
+            const chartData = dashboardData.analytics_data || {};
+            
+            analyticsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'New Cases',
+                        data: chartData.new_cases || [12, 19, 15, 25, 22, 18, 20],
+                        borderColor: '#ff6b35',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Recovered',
+                        data: chartData.recovered || [8, 14, 12, 20, 18, 15, 17],
+                        borderColor: '#00ff88',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Critical',
+                        data: chartData.critical || [2, 3, 1, 4, 2, 1, 3],
+                        borderColor: '#ff4444',
+                        backgroundColor: 'rgba(255, 68, 68, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#ffffff' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#ffffff' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update system alerts
+        function updateSystemAlerts() {
+            const alertElement = document.getElementById('systemAlert');
+            const alertLevel = dashboardData.system_alert_level || 'normal';
+            
+            alertElement.className = `alert-indicator alert-${alertLevel}`;
+            alertElement.innerHTML = `
+                <div class="fas fa-heartbeat"></div>
+                System ${alertLevel.charAt(0).toUpperCase() + alertLevel.slice(1)}
+            `;
+        }
+
+        // Chart tab switching
+        document.querySelectorAll('.chart-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update chart based on selected tab
+                const chartType = this.dataset.chart;
+                updateChartByType(chartType);
+            });
+        });
+
+        function updateChartByType(type) {
+            // This would update the chart based on the selected type
+            console.log('Updating chart for:', type);
+        }
+
+        // Action functions
+        function dispatchEmergency(patientId) {
+            if (confirm(`Dispatch emergency services for Patient ${patientId}?`)) {
+                fetch('/api/dispatch-emergency', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patient_id: patientId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Emergency services dispatched successfully!');
+                    loadDashboardData();
+                });
+            }
+        }
+
+        function assignToSpecialist(patientId) {
+            if (confirm(`Assign Patient ${patientId} to specialist?`)) {
+                alert('Patient assigned to specialist successfully!');
+            }
+        }
+
+        function viewDetails(patientId) {
+            alert(`Viewing full details for Patient ${patientId}`);
+        }
+
+        function sendEmergencyAlert() {
+            if (confirm('Send district-wide emergency alert?')) {
+                alert('Emergency alert sent to all CHWs!');
+            }
+        }
+
+        function generateReport() {
+            alert('Generating comprehensive health report...');
+        }
+
+        function scheduleVisit() {
+            alert('Opening visit scheduler...');
+        }
+
+        function contactCHW() {
+            alert('Opening CHW contact directory...');
+        }
+
+        // Initialize dashboard on load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+            
+            // Auto-refresh data every 45 seconds
+            setInterval(loadDashboardData, 45000);
+        });
+    </script>
+</body>
+</html>

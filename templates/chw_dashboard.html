@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHW Dashboard - RHAS v2.0</title>
+    
+    <!-- External Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 25%, #2d2d2d 50%, #1a1a1a 75%, #0c0c0c 100%);
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(0, 150, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 100, 200, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        /* Header Styles */
+        .header-section {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .profile-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(45deg, #5b86e5, #36d1dc);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+        
+        .profile-info h5 {
+            margin: 0;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        
+        .profile-info p {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+        
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .status-light {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-light.green { background: #00ff88; }
+        .status-light.yellow { background: #ffdd00; }
+        .status-light.red { background: #ff4444; }
+        
+        /* Dashboard Cards */
+        .dashboard-card {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 25px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #5b86e5, #36d1dc);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(91, 134, 229, 0.3);
+        }
+        
+        .dashboard-card:hover::before {
+            opacity: 1;
+        }
+        
+        /* Statistics Cards */
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #00d4ff;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        
+        .stat-trend {
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+        
+        .trend-up { color: #00ff88; }
+        .trend-down { color: #ff4444; }
+        .trend-stable { color: #ffdd00; }
+        
+        /* Village Map */
+        .village-map {
+            height: 350px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Verification Queue */
+        .verification-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .verification-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(91, 134, 229, 0.3);
+        }
+        
+        .verification-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .risk-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .risk-high { background: rgba(255, 68, 68, 0.2); color: #ff4444; border: 1px solid rgba(255, 68, 68, 0.3); }
+        .risk-medium { background: rgba(255, 221, 0, 0.2); color: #ffdd00; border: 1px solid rgba(255, 221, 0, 0.3); }
+        .risk-low { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.3); }
+        
+        .verification-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-verify {
+            background: linear-gradient(45deg, #00ff88, #00cc66);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-reject {
+            background: linear-gradient(45deg, #ff4444, #cc3333);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-verify:hover, .btn-reject:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Community Leaderboard */
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid #5b86e5;
+        }
+        
+        .leaderboard-rank {
+            font-weight: 700;
+            color: #00d4ff;
+            margin-right: 15px;
+        }
+        
+        /* Emergency Button */
+        .emergency-btn {
+            background: linear-gradient(45deg, #ff4444, #cc3333);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            animation: pulse-red 3s infinite;
+        }
+        
+        .emergency-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(255, 68, 68, 0.4);
+        }
+        
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 20px 5px rgba(255, 68, 68, 0.2); }
+        }
+        
+        /* Sidebar */
+        .sidebar-section {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .quick-actions {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .quick-action-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .quick-action-btn:hover {
+            background: rgba(91, 134, 229, 0.2);
+            border-color: #5b86e5;
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        /* Weather Widget */
+        .weather-widget {
+            background: linear-gradient(135deg, rgba(91, 134, 229, 0.1), rgba(54, 209, 220, 0.1));
+            border: 1px solid rgba(91, 134, 229, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .weather-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #00d4ff;
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-card {
+                padding: 15px;
+            }
+            
+            .stat-value {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Section -->
+    <div class="header-section">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <div class="user-profile">
+                        <div class="profile-avatar">
+                            <i class="fas fa-user-md"></i>
+                        </div>
+                        <div class="profile-info">
+                            <h5>{{ user.full_name }}</h5>
+                            <p><i class="fas fa-map-marker-alt"></i> {{ user.village }} | {{ role_name }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-heartbeat"></i> RHAS v2.0 - CHW Dashboard
+                    </h4>
+                </div>
+                <div class="col-md-4">
+                    <div class="system-status justify-content-end">
+                        <div class="status-indicator">
+                            <div class="status-light green"></div>
+                            System Health
+                        </div>
+                        <button class="btn emergency-btn">
+                            <i class="fas fa-exclamation-triangle"></i> Emergency
+                        </button>
+                        <a href="/logout" class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-lg-8">
+                <!-- Primary Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="dashboard-card stat-card fade-in">
+                            <div class="stat-value" id="todaysReports">0</div>
+                            <div class="stat-label">Today's Reports</div>
+                            <div class="stat-trend trend-up">
+                                <i class="fas fa-arrow-up"></i> +12%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-card stat-card fade-in">
+                            <div class="stat-value" id="verificationQueue">0</div>
+                            <div class="stat-label">Verification Queue</div>
+                            <div class="stat-trend trend-stable">
+                                <i class="fas fa-minus"></i> Stable
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-card stat-card fade-in">
+                            <div class="stat-value" id="healthScore">0.0</div>
+                            <div class="stat-label">Village Health Score</div>
+                            <div class="stat-trend trend-up">
+                                <i class="fas fa-arrow-up"></i> +0.3
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-card stat-card fade-in">
+                            <div class="stat-value" id="responseEfficiency">0%</div>
+                            <div class="stat-label">Response Efficiency</div>
+                            <div class="stat-trend trend-up">
+                                <i class="fas fa-arrow-up"></i> +2%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Village Map -->
+                <div class="dashboard-card fade-in">
+                    <h5 class="mb-3">
+                        <i class="fas fa-map"></i> Interactive Village Health Map
+                    </h5>
+                    <div class="village-map" id="villageMap"></div>
+                    <div class="row mt-3">
+                        <div class="col-3 text-center">
+                            <div class="text-success">
+                                <i class="fas fa-circle"></i> Healthy
+                                <div class="fw-bold" id="healthyHouseholds">0</div>
+                            </div>
+                        </div>
+                        <div class="col-3 text-center">
+                            <div class="text-warning">
+                                <i class="fas fa-circle"></i> At Risk
+                                <div class="fw-bold" id="atRiskHouseholds">0</div>
+                            </div>
+                        </div>
+                        <div class="col-3 text-center">
+                            <div class="text-danger">
+                                <i class="fas fa-circle"></i> Active Cases
+                                <div class="fw-bold" id="activeCases">0</div>
+                            </div>
+                        </div>
+                        <div class="col-3 text-center">
+                            <div class="text-secondary">
+                                <i class="fas fa-circle"></i> No Data
+                                <div class="fw-bold" id="noDataHouseholds">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Verification Queue Panel -->
+                <div class="dashboard-card fade-in">
+                    <h5 class="mb-3">
+                        <i class="fas fa-clipboard-check"></i> Report Verification Queue
+                        <span class="badge bg-primary ms-2" id="queueCount">0</span>
+                    </h5>
+                    <div id="verificationList">
+                        <!-- Verification items will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Quick Actions -->
+                <div class="sidebar-section">
+                    <h6 class="mb-3">
+                        <i class="fas fa-bolt"></i> Quick Actions
+                    </h6>
+                    <div class="quick-actions">
+                        <a href="#" class="quick-action-btn">
+                            <i class="fas fa-plus-circle"></i> Report Symptoms
+                        </a>
+                        <a href="#" class="quick-action-btn">
+                            <i class="fas fa-ambulance"></i> Call Ambulance
+                        </a>
+                        <a href="#" class="quick-action-btn">
+                            <i class="fas fa-phone"></i> Contact Medical Officer
+                        </a>
+                        <a href="#" class="quick-action-btn">
+                            <i class="fas fa-camera"></i> Photo Evidence
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Weather Widget -->
+                <div class="sidebar-section">
+                    <h6 class="mb-3">
+                        <i class="fas fa-cloud-sun"></i> Disease Risk Factors
+                    </h6>
+                    <div class="weather-widget">
+                        <div class="weather-icon">
+                            <i class="fas fa-thermometer-half"></i>
+                        </div>
+                        <div class="fw-bold">28°C | 85% Humidity</div>
+                        <div class="small text-muted mt-2">
+                            Vector Breeding Risk: Medium
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Community Leaderboard -->
+                <div class="sidebar-section">
+                    <h6 class="mb-3">
+                        <i class="fas fa-trophy"></i> Community Leaderboard
+                    </h6>
+                    <div id="communityLeaderboard">
+                        <!-- Leaderboard items will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Health Tips -->
+                <div class="sidebar-section">
+                    <h6 class="mb-3">
+                        <i class="fas fa-lightbulb"></i> Daily Health Tip
+                    </h6>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Tip of the Day:</strong>
+                        During monsoon season, ensure proper drainage around homes to prevent mosquito breeding.
+                    </div>
+                </div>
+
+                <!-- Training Progress -->
+                <div class="sidebar-section">
+                    <h6 class="mb-3">
+                        <i class="fas fa-graduation-cap"></i> Training Progress
+                    </h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" style="width: 85%">85%</div>
+                    </div>
+                    <small class="text-muted">
+                        Module 4: Advanced Symptom Recognition
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize dashboard
+        let dashboardData = {};
+        let villageMap;
+
+        // Load dashboard data
+        function loadDashboardData() {
+            fetch('/api/dashboard-data')
+                .then(response => response.json())
+                .then(data => {
+                    dashboardData = data;
+                    updateStatistics();
+                    updateVerificationQueue();
+                    updateCommunityLeaderboard();
+                    updateVillageMap();
+                })
+                .catch(error => console.error('Error loading dashboard data:', error));
+        }
+
+        // Update statistics cards
+        function updateStatistics() {
+            document.getElementById('todaysReports').textContent = dashboardData.todays_reports || 0;
+            document.getElementById('verificationQueue').textContent = dashboardData.verification_queue || 0;
+            document.getElementById('healthScore').textContent = dashboardData.village_health_score || '0.0';
+            document.getElementById('responseEfficiency').textContent = dashboardData.response_efficiency || '0%';
+            
+            // Update queue count badge
+            document.getElementById('queueCount').textContent = dashboardData.verification_queue || 0;
+        }
+
+        // Update verification queue
+        function updateVerificationQueue() {
+            const verificationList = document.getElementById('verificationList');
+            const pendingVerifications = dashboardData.pending_verifications || [];
+            
+            if (pendingVerifications.length === 0) {
+                verificationList.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h6>All reports verified!</h6>
+                        <p class="text-muted">Great work! No pending verifications.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            verificationList.innerHTML = pendingVerifications.map(item => `
+                <div class="verification-item">
+                    <div class="verification-header">
+                        <div>
+                            <strong>Patient ${item.phone}</strong>
+                            <span class="risk-badge risk-${item.risk.toLowerCase()}">${item.risk}</span>
+                        </div>
+                        <div class="text-muted small">${item.time}</div>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Symptoms:</strong> ${item.symptoms}
+                    </div>
+                    <div class="mb-2">
+                        <strong>AI Confidence:</strong> ${item.confidence}
+                    </div>
+                    <div class="verification-actions">
+                        <button class="btn-verify" onclick="verifyReport(${item.id}, 'verified')">
+                            <i class="fas fa-check"></i> Verify
+                        </button>
+                        <button class="btn-reject" onclick="verifyReport(${item.id}, 'rejected')">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                        <button class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-info-circle"></i> Details
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update community leaderboard
+        function updateCommunityLeaderboard() {
+            const leaderboard = document.getElementById('communityLeaderboard');
+            const leaders = dashboardData.community_leaders || [];
+            
+            if (leaders.length === 0) {
+                leaderboard.innerHTML = '<p class="text-muted">No recent activity</p>';
+                return;
+            }
+            
+            leaderboard.innerHTML = leaders.map((leader, index) => `
+                <div class="leaderboard-item">
+                    <div>
+                        <span class="leaderboard-rank">#${index + 1}</span>
+                        Family ${leader.phone}
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold text-primary">${leader.points} pts</div>
+                        <div class="small text-muted">${leader.reports} reports</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize village map
+        function updateVillageMap() {
+            if (!villageMap) {
+                villageMap = L.map('villageMap').setView([23.2599, 77.4126], 15);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(villageMap);
+            }
+            
+            const mapData = dashboardData.village_map_data || {};
+            
+            // Update household counts
+            document.getElementById('healthyHouseholds').textContent = mapData.healthy_households || 0;
+            document.getElementById('atRiskHouseholds').textContent = mapData.at_risk_households || 0;
+            document.getElementById('activeCases').textContent = mapData.active_cases || 0;
+            document.getElementById('noDataHouseholds').textContent = mapData.no_data_households || 0;
+            
+            // Add markers for households
+            const coordinates = mapData.coordinates || [];
+            coordinates.forEach(coord => {
+                const color = coord.status === 'healthy' ? 'green' : 
+                            coord.status === 'at_risk' ? 'orange' : 'red';
+                
+                L.circleMarker([coord.lat, coord.lng], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.7,
+                    radius: 8
+                }).addTo(villageMap)
+                .bindPopup(`Status: ${coord.status.replace('_', ' ').toUpperCase()}`);
+            });
+        }
+
+        // Verify report function
+        function verifyReport(reportId, status) {
+            fetch('/api/verify-report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    report_id: reportId,
+                    status: status
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    alert(`Report ${status} successfully! Blockchain hash: ${data.transaction_hash.substring(0, 16)}...`);
+                    
+                    // Reload dashboard data
+                    loadDashboardData();
+                } else {
+                    alert('Error verifying report. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error verifying report. Please check your connection.');
+            });
+        }
+
+        // Emergency button functionality
+        document.querySelector('.emergency-btn').addEventListener('click', function() {
+            if (confirm('This will alert the Medical Officer immediately. Continue?')) {
+                alert('Emergency alert sent! Medical Officer will contact you shortly.');
+            }
+        });
+
+        // Initialize dashboard on load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+            
+            // Auto-refresh data every 30 seconds
+            setInterval(loadDashboardData, 30000);
+        });
+    </script>
+</body>
+</html>

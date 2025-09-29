@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RHAS v2.0 - Real-time Dashboard</title>
+    
+    <!-- Chart.js for live charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Bootstrap for styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4fc3f7;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #4caf50;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .report-feed {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .report-feed {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .report-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            border-left: 4px solid #4fc3f7;
+        }
+        
+        .report-item.emergency {
+            border-left-color: #f44336;
+            background: rgba(244, 67, 54, 0.1);
+        }
+        
+        .report-item.medium {
+            border-left-color: #ff9800;
+            background: rgba(255, 152, 0, 0.1);
+        }
+        
+        .last-updated {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        
+        .last-updated {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand">
+                <i class="fas fa-heartbeat"></i> RHAS v2.0 - Real-time Dashboard
+                <span class="live-indicator"></span>
+            </span>
+            <span class="navbar-text">
+                <i class="fas fa-clock"></i> Last Updated: <span id="lastUpdated">Loading...</span>
+            </span>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <!-- Summary Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="dashboard-card text-center">
+                    <div class="stat-value" id="totalReports">0</div>
+                    <div class="stat-label">
+                        <i class="fas fa-file-medical"></i> Total Reports Today
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="dashboard-card text-center">
+                    <div class="stat-value" id="emergencyAlerts">0</div>
+                    <div class="stat-label">
+                        <i class="fas fa-exclamation-triangle"></i> Emergency Alerts
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="dashboard-card text-center">
+                    <div class="stat-value" id="pointsDistributed">0</div>
+                    <div class="stat-label">
+                        <i class="fas fa-coins"></i> Points Distributed
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="dashboard-card text-center">
+                    <div class="stat-value" id="uniqueUsers">0</div>
+                    <div class="stat-label">
+                        <i class="fas fa-users"></i> Active Users
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Stats Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="dashboard-card text-center">
+                    <div class="stat-value" id="languagesDetected">0</div>
+                    <div class="stat-label">
+                        <i class="fas fa-language"></i> Languages Detected
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="dashboard-card text-center">
+                    <div class="stat-value" id="fraudPrevented">0</div>
+                    <div class="stat-label">
+                        <i class="fas fa-shield-alt"></i> Fraud Prevented
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="dashboard-card text-center">
+                    <div class="stat-value" id="avgResponseTime">1.2s</div>
+                    <div class="stat-label">
+                        <i class="fas fa-stopwatch"></i> Avg Response Time
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="dashboard-card text-center">
+                    <div class="stat-value" id="systemUptime">99.8%</div>
+                    <div class="stat-label">
+                        <i class="fas fa-server"></i> System Uptime
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <!-- Language Distribution Pie Chart -->
+            <div class="col-md-6">
+                <div class="dashboard-card">
+                    <h5><i class="fas fa-chart-pie"></i> Language Distribution</h5>
+                    <div class="chart-container">
+                        <canvas id="languageChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Level Distribution -->
+            <div class="col-md-6">
+                <div class="dashboard-card">
+                    <h5><i class="fas fa-chart-donut"></i> Risk Level Distribution</h5>
+                    <div class="chart-container">
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <!-- Hourly Reports Line Chart -->
+            <div class="col-md-8">
+                <div class="dashboard-card">
+                    <h5><i class="fas fa-chart-line"></i> Hourly Report Distribution</h5>
+                    <div class="chart-container">
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Tier Distribution -->
+            <div class="col-md-4">
+                <div class="dashboard-card">
+                    <h5><i class="fas fa-trophy"></i> User Tier Distribution</h5>
+                    <div class="chart-container">
+                        <canvas id="tierChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Reports Feed -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="dashboard-card">
+                    <h5><i class="fas fa-stream"></i> Live Reports Feed <span class="live-indicator"></span></h5>
+                    <div class="report-feed" id="reportsFeed">
+                        <!-- Reports will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chart instances
+        let languageChart, riskChart, hourlyChart, tierChart;
+
+        // Initialize charts
+        function initCharts() {
+            // Language Distribution Pie Chart
+            const langCtx = document.getElementById('languageChart').getContext('2d');
+            languageChart = new Chart(langCtx, {
+                type: 'pie',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'white'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Risk Level Chart
+            const riskCtx = document.getElementById('riskChart').getContext('2d');
+            riskChart = new Chart(riskCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['High Risk', 'Medium Risk', 'Low Risk'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: ['#F44336', '#FF9800', '#4CAF50']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'white'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Hourly Reports Line Chart with gradient and animations
+            const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+            
+            // Create gradient for the line
+            const hourlyGradient = hourlyCtx.createLinearGradient(0, 0, 0, 350);
+            hourlyGradient.addColorStop(0, 'rgba(91, 134, 229, 0.8)');
+            hourlyGradient.addColorStop(0.5, 'rgba(54, 209, 220, 0.4)');
+            hourlyGradient.addColorStop(1, 'rgba(91, 134, 229, 0.1)');
+            
+            const hourlyBorderGradient = hourlyCtx.createLinearGradient(0, 0, 0, 350);
+            hourlyBorderGradient.addColorStop(0, '#5b86e5');
+            hourlyBorderGradient.addColorStop(1, '#36d1dc');
+            
+            hourlyChart = new Chart(hourlyCtx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => i.toString().padStart(2, '0') + ':00'),
+                    datasets: [{
+                        label: 'Health Reports per Hour',
+                        data: new Array(24).fill(0),
+                        borderColor: hourlyBorderGradient,
+                        backgroundColor: hourlyGradient,
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#5b86e5',
+                        pointBorderWidth: 2,
+                        pointHoverBackgroundColor: '#5b86e5',
+                        pointHoverBorderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'white',
+                                font: {
+                                    family: 'Rajdhani',
+                                    size: 14,
+                                    weight: '600'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#5b86e5',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.8)',
+                                font: {
+                                    family: 'Rajdhani',
+                                    size: 12
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.8)',
+                                font: {
+                                    family: 'Rajdhani',
+                                    size: 12
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeInOutCubic'
+                    }
+                }
+            });
+
+            // User Tier Chart
+            const tierCtx = document.getElementById('tierChart').getContext('2d');
+            tierChart = new Chart(tierCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'],
+                    datasets: [{
+                        label: 'Users',
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: ['#CD7F32', '#C0C0C0', '#FFD700', '#E5E4E2', '#B9F2FF']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: 'white'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'white'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update dashboard with real-time data
+        function updateDashboard() {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    // Update summary statistics
+                    document.getElementById('totalReports').textContent = data.summary.total_reports_today;
+                    document.getElementById('emergencyAlerts').textContent = data.summary.emergency_alerts;
+                    document.getElementById('pointsDistributed').textContent = data.summary.points_distributed;
+                    document.getElementById('uniqueUsers').textContent = data.summary.unique_users;
+                    document.getElementById('languagesDetected').textContent = data.summary.languages_detected;
+                    document.getElementById('fraudPrevented').textContent = data.summary.fraud_prevented;
+                    document.getElementById('avgResponseTime').textContent = data.summary.avg_response_time;
+                    document.getElementById('systemUptime').textContent = data.summary.system_uptime;
+                    document.getElementById('lastUpdated').textContent = data.last_updated;
+
+                    // Update Language Chart
+                    const languages = data.charts.languages || {};
+                    languageChart.data.labels = Object.keys(languages);
+                    languageChart.data.datasets[0].data = Object.values(languages);
+                    languageChart.update();
+
+                    // Update Risk Chart
+                    const risks = data.charts.risk_levels || {};
+                    riskChart.data.datasets[0].data = [
+                        risks['high'] || 0,
+                        risks['medium'] || 0,
+                        risks['low'] || 0
+                    ];
+                    riskChart.update();
+
+                    // Update Hourly Chart
+                    const hourlyData = data.charts.hourly_reports || {};
+                    const hourlyArray = new Array(24).fill(0);
+                    Object.keys(hourlyData).forEach(hour => {
+                        hourlyArray[parseInt(hour)] = hourlyData[hour];
+                    });
+                    hourlyChart.data.datasets[0].data = hourlyArray;
+                    hourlyChart.update();
+
+                    // Update Tier Chart
+                    const tiers = data.charts.user_tiers || {};
+                    tierChart.data.datasets[0].data = [
+                        tiers['bronze'] || 0,
+                        tiers['silver'] || 0,
+                        tiers['gold'] || 0,
+                        tiers['platinum'] || 0,
+                        tiers['diamond'] || 0
+                    ];
+                    tierChart.update();
+                })
+                .catch(error => {
+                    console.error('Error updating dashboard:', error);
+                });
+        }
+
+        // Update reports feed
+        function updateReportsFeed() {
+            fetch('/api/reports?limit=10')
+                .then(response => response.json())
+                .then(reports => {
+                    const feed = document.getElementById('reportsFeed');
+                    feed.innerHTML = '';
+                    
+                    reports.forEach(report => {
+                        const reportItem = document.createElement('div');
+                        reportItem.className = `report-item ${report.risk.toLowerCase()}`;
+                        
+                        reportItem.innerHTML = `
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>***${report.phone}</strong> (${report.language})
+                                    <span class="badge bg-${report.risk === 'HIGH' ? 'danger' : report.risk === 'MEDIUM' ? 'warning' : 'success'}">
+                                        ${report.risk}
+                                    </span>
+                                </div>
+                                <div class="text-end">
+                                    <small>${new Date(report.timestamp).toLocaleTimeString()}</small>
+                                </div>
+                            </div>
+                            <div class="mt-1">
+                                <strong>Symptoms:</strong> ${report.symptoms}<br>
+                                <strong>Condition:</strong> ${report.condition}<br>
+                                <strong>Points Awarded:</strong> +${report.points} | 
+                                <strong>Tier:</strong> ${report.tier}
+                            </div>
+                        `;
+                        
+                        feed.appendChild(reportItem);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error updating reports feed:', error);
+                });
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initCharts();
+            updateDashboard();
+            updateReportsFeed();
+
+            // Set up auto-refresh every 5 seconds
+            setInterval(() => {
+                updateDashboard();
+                updateReportsFeed();
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
