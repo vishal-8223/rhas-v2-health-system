@@ -56,15 +56,47 @@ except ImportError as e:
 # Import the judge demonstration system
 try:
     from judge_demo_geographic_predictor import create_judge_demo_route
-    from personalized_alert_status import create_personalized_alert_routes
-    from patient_medical_history import create_patient_report_routes
-    from enhanced_government_alert_details import create_enhanced_government_alert_routes
-    from enhanced_dashboard_data import get_enhanced_dashboard_data, get_enhanced_chart_data
     JUDGE_DEMO_AVAILABLE = True
     print("👨‍⚖️ Judge Demo Geographic Predictor loaded successfully")
 except ImportError as e:
     JUDGE_DEMO_AVAILABLE = False
     print(f"⚠️ Judge Demo not available: {e}")
+
+# Import the personalized alert routes system
+try:
+    from personalized_alert_status import create_personalized_alert_routes
+    PERSONALIZED_ALERT_AVAILABLE = True
+    print("📋 Personalized Alert Status routes loaded successfully")
+except ImportError as e:
+    PERSONALIZED_ALERT_AVAILABLE = False
+    print(f"⚠️ Personalized Alert routes not available: {e}")
+
+# Import the patient medical history system
+try:
+    from patient_medical_history import create_patient_report_routes
+    PATIENT_REPORT_AVAILABLE = True
+    print("👨‍⚕️ Patient Medical History routes loaded successfully")
+except ImportError as e:
+    PATIENT_REPORT_AVAILABLE = False
+    print(f"⚠️ Patient Report routes not available: {e}")
+
+# Import the enhanced government alert details system
+try:
+    from enhanced_government_alert_details import create_enhanced_government_alert_routes
+    ENHANCED_ALERT_DETAILS_AVAILABLE = True
+    print("🏛️ Enhanced Government Alert Details routes loaded successfully")
+except ImportError as e:
+    ENHANCED_ALERT_DETAILS_AVAILABLE = False
+    print(f"⚠️ Enhanced Government Alert Details not available: {e}")
+
+# Import the enhanced dashboard data system
+try:
+    from enhanced_dashboard_data import get_enhanced_dashboard_data, get_enhanced_chart_data
+    ENHANCED_DASHBOARD_DATA_AVAILABLE = True
+    print("📊 Enhanced Dashboard Data system loaded successfully")
+except ImportError as e:
+    ENHANCED_DASHBOARD_DATA_AVAILABLE = False
+    print(f"⚠️ Enhanced Dashboard Data not available: {e}")
 
 # Load environment
 load_dotenv()
@@ -2826,26 +2858,34 @@ if JUDGE_DEMO_AVAILABLE:
         print(f"⚠️ Judge demo route initialization warning: {e}")
 
 # Initialize personalized alert status routes if available
-if GOVERNMENT_ALERTS_AVAILABLE:
+if PERSONALIZED_ALERT_AVAILABLE:
     try:
         create_personalized_alert_routes(app)
-        print("🏛️ Personalized Alert Status routes initialized at http://localhost:4003/alert-status/<alert_id>")
+        print("📋 Personalized Alert Status routes initialized at http://localhost:4003/alert-status/<alert_id>")
     except Exception as e:
         print(f"⚠️ Personalized alert routes initialization warning: {e}")
+else:
+    print("⚠️ Personalized Alert Status routes not available")
 
-# Initialize patient medical history routes
-try:
-    create_patient_report_routes(app)
-    print("👨‍⚕️ Patient Medical History routes initialized at http://localhost:4003/patient-report/<phone_number>")
-except Exception as e:
-    print(f"⚠️ Patient history routes initialization warning: {e}")
+# Initialize patient medical history routes if available
+if PATIENT_REPORT_AVAILABLE:
+    try:
+        create_patient_report_routes(app)
+        print("👨‍⚕️ Patient Medical History routes initialized at http://localhost:4003/patient-report/<phone_number>")
+    except Exception as e:
+        print(f"⚠️ Patient history routes initialization warning: {e}")
+else:
+    print("⚠️ Patient Medical History routes not available")
 
-# Initialize enhanced government alert detail routes
-try:
-    create_enhanced_government_alert_routes(app)
-    print("🏛️ Enhanced Government Alert Details routes initialized")
-except Exception as e:
-    print(f"⚠️ Enhanced alert details routes initialization warning: {e}")
+# Initialize enhanced government alert detail routes if available
+if ENHANCED_ALERT_DETAILS_AVAILABLE:
+    try:
+        create_enhanced_government_alert_routes(app)
+        print("🏛️ Enhanced Government Alert Details routes initialized")
+    except Exception as e:
+        print(f"⚠️ Enhanced alert details routes initialization warning: {e}")
+else:
+    print("⚠️ Enhanced Government Alert Details routes not available")
 
 if __name__ == "__main__":
     start_enhanced_system()
