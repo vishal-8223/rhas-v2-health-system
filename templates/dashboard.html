@@ -127,89 +127,156 @@
         }
         
         .action-dropdown {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            z-index: 1050;
-            min-width: 160px;
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            padding: 8px 0;
-            margin-top: 4px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            position: fixed;
+            z-index: 9999;
+            min-width: 180px;
+            max-width: 220px;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(79, 195, 247, 0.3);
+            border-radius: 12px;
+            padding: 12px 0;
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.7), 0 0 30px rgba(79, 195, 247, 0.2);
             opacity: 0;
             visibility: hidden;
-            transform: translateY(-10px);
-            transition: all 0.3s ease;
+            transform: scale(0.9) translateY(-20px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            /* Ensure it's always scrollable within viewport */
+            max-height: 300px;
+            overflow-y: auto;
         }
         
         .action-dropdown.show {
             opacity: 1;
             visibility: visible;
-            transform: translateY(0);
+            transform: scale(1) translateY(0);
+        }
+        
+        /* Custom scrollbar for dropdown */
+        .action-dropdown::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .action-dropdown::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        
+        .action-dropdown::-webkit-scrollbar-thumb {
+            background: rgba(79, 195, 247, 0.6);
+            border-radius: 3px;
+        }
+        
+        .action-dropdown::-webkit-scrollbar-thumb:hover {
+            background: rgba(79, 195, 247, 0.8);
         }
         
         .action-dropdown-item {
-            display: block;
-            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            padding: 12px 18px;
             color: #ffffff;
             text-decoration: none;
             font-size: 0.9rem;
+            font-weight: 500;
             border: none;
             background: transparent;
             width: 100%;
             text-align: left;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             cursor: pointer;
+            border-radius: 6px;
+            margin: 2px 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .action-dropdown-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, rgba(79, 195, 247, 0.2), transparent);
+            transition: width 0.3s ease;
+            z-index: -1;
+        }
+        
+        .action-dropdown-item:hover::before {
+            width: 100%;
         }
         
         .action-dropdown-item:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(79, 195, 247, 0.15);
             color: #4fc3f7;
-            transform: translateX(4px);
+            transform: translateX(6px);
+            box-shadow: 0 4px 12px rgba(79, 195, 247, 0.2);
         }
         
         .action-dropdown-item.danger:hover {
-            background: rgba(255, 68, 68, 0.2);
-            color: #ff4444;
+            background: rgba(255, 68, 68, 0.15);
+            color: #ff6b6b;
+            box-shadow: 0 4px 12px rgba(255, 68, 68, 0.2);
         }
         
         .action-dropdown-item.success:hover {
-            background: rgba(76, 175, 80, 0.2);
-            color: #4caf50;
+            background: rgba(76, 175, 80, 0.15);
+            color: #66bb6a;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+        }
+        
+        .action-dropdown-item.warning:hover {
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffca28;
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+        }
+        
+        .action-dropdown-item i {
+            margin-right: 10px;
+            font-size: 1rem;
+            width: 16px;
+            text-align: center;
         }
         
         .action-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #ffffff;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.85rem;
+            background: linear-gradient(135deg, rgba(79, 195, 247, 0.2), rgba(79, 195, 247, 0.1));
+            border: 2px solid rgba(79, 195, 247, 0.3);
+            color: #4fc3f7;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.9rem;
             cursor: pointer;
             transition: all 0.3s ease;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(79, 195, 247, 0.1);
         }
         
         .action-btn:hover {
-            background: rgba(79, 195, 247, 0.2);
+            background: linear-gradient(135deg, rgba(79, 195, 247, 0.3), rgba(79, 195, 247, 0.2));
             border-color: #4fc3f7;
-            color: #4fc3f7;
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 195, 247, 0.3);
+        }
+        
+        .action-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(79, 195, 247, 0.2);
         }
         
         /* Ensure dropdown stays within viewport */
         .report-item {
             position: relative;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
         }
         
-        /* Auto-adjust dropdown position near bottom */
-        .report-item:nth-last-child(-n+2) .action-dropdown {
-            top: auto;
-            bottom: 100%;
-            margin-top: 0;
-            margin-bottom: 4px;
+        .report-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+            transform: translateY(-2px);
         }
         .navbar-brand {
             font-weight: bold;
@@ -641,19 +708,28 @@
                                         </button>
                                         <div class="action-dropdown" id="dropdown-${report.id || Math.random()}">
                                             <button class="action-dropdown-item" onclick="viewReportDetails('${report.phone}')">
-                                                <i class="fas fa-eye me-2"></i> View Details
+                                                <i class="fas fa-eye"></i> View Full Details
+                                            </button>
+                                            <button class="action-dropdown-item" onclick="viewPatientHistory('${report.phone}')">
+                                                <i class="fas fa-history"></i> Patient History
                                             </button>
                                             <button class="action-dropdown-item" onclick="contactPatient('${report.phone}')">
-                                                <i class="fas fa-phone me-2"></i> Contact Patient
+                                                <i class="fas fa-phone"></i> Contact Patient
                                             </button>
-                                            <button class="action-dropdown-item" onclick="escalateCase('${report.phone}', '${report.risk}')">
-                                                <i class="fas fa-exclamation-triangle me-2"></i> Escalate Case
+                                            <button class="action-dropdown-item warning" onclick="escalateCase('${report.phone}', '${report.risk}')">
+                                                <i class="fas fa-exclamation-triangle"></i> Escalate Case
+                                            </button>
+                                            <button class="action-dropdown-item" onclick="assignDoctor('${report.phone}')">
+                                                <i class="fas fa-user-md"></i> Assign Doctor
+                                            </button>
+                                            <button class="action-dropdown-item" onclick="scheduleFollowup('${report.phone}')">
+                                                <i class="fas fa-calendar-alt"></i> Schedule Follow-up
                                             </button>
                                             <button class="action-dropdown-item success" onclick="markResolved('${report.phone}')">
-                                                <i class="fas fa-check me-2"></i> Mark Resolved
+                                                <i class="fas fa-check"></i> Mark Resolved
                                             </button>
                                             <button class="action-dropdown-item danger" onclick="flagReport('${report.phone}')">
-                                                <i class="fas fa-flag me-2"></i> Flag Report
+                                                <i class="fas fa-flag"></i> Flag Report
                                             </button>
                                         </div>
                                     </div>
@@ -677,9 +753,10 @@
                 });
         }
 
-        // Action dropdown functions
+        // Action dropdown functions with smart positioning
         function toggleActionDropdown(reportId) {
             const dropdown = document.getElementById(`dropdown-${reportId}`);
+            const actionBtn = event.target.closest('.action-btn');
             
             // Close all other dropdowns first
             document.querySelectorAll('.action-dropdown').forEach(dd => {
@@ -689,9 +766,50 @@
             });
             
             // Toggle current dropdown
-            if (dropdown) {
-                dropdown.classList.toggle('show');
+            if (dropdown && actionBtn) {
+                if (dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                } else {
+                    // Position the dropdown intelligently
+                    positionDropdown(dropdown, actionBtn);
+                    dropdown.classList.add('show');
+                }
             }
+        }
+        
+        function positionDropdown(dropdown, triggerElement) {
+            const rect = triggerElement.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const viewportWidth = window.innerWidth;
+            const dropdownHeight = 300; // max-height from CSS
+            const dropdownWidth = 220; // max-width from CSS
+            
+            let top = rect.bottom + 8;
+            let left = rect.right - dropdownWidth;
+            
+            // Check if dropdown would go below viewport
+            if (top + dropdownHeight > viewportHeight) {
+                // Position above the button
+                top = rect.top - dropdownHeight - 8;
+            }
+            
+            // Check if dropdown would go outside left edge
+            if (left < 10) {
+                left = 10;
+            }
+            
+            // Check if dropdown would go outside right edge
+            if (left + dropdownWidth > viewportWidth - 10) {
+                left = viewportWidth - dropdownWidth - 10;
+            }
+            
+            // Ensure minimum top position
+            if (top < 10) {
+                top = 10;
+            }
+            
+            dropdown.style.top = `${top}px`;
+            dropdown.style.left = `${left}px`;
         }
         
         function viewReportDetails(phone) {
@@ -699,8 +817,31 @@
             closeAllDropdowns();
         }
         
+        function viewPatientHistory(phone) {
+            alert(`Opening patient history for: ${phone}`);
+            // In a real implementation, this would open the patient history page
+            // window.open(`/patient-report/${phone}`, '_blank');
+            closeAllDropdowns();
+        }
+        
         function contactPatient(phone) {
             alert(`Initiating contact with patient: ${phone}`);
+            closeAllDropdowns();
+        }
+        
+        function assignDoctor(phone) {
+            const doctorName = prompt(`Assign doctor to patient ${phone}:`, 'Dr. Smith');
+            if (doctorName) {
+                alert(`Doctor ${doctorName} assigned to patient: ${phone}`);
+            }
+            closeAllDropdowns();
+        }
+        
+        function scheduleFollowup(phone) {
+            const followupDate = prompt(`Schedule follow-up for patient ${phone} (YYYY-MM-DD):`, new Date().toISOString().split('T')[0]);
+            if (followupDate) {
+                alert(`Follow-up scheduled for ${followupDate} for patient: ${phone}`);
+            }
             closeAllDropdowns();
         }
         
