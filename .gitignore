@@ -34,13 +34,13 @@ venv.bak/
 .env.test.local
 .env.production.local
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-rhas_messages.db
-government_alerts.db
-rhas_complete.db
+# Database (commented out for demo deployment - judges need to see the data)
+# *.db
+# *.sqlite
+# *.sqlite3
+# rhas_messages.db
+# government_alerts.db
+# rhas_complete.db
 
 # IDE
 .vscode/
